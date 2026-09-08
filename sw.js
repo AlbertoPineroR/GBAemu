@@ -1,4 +1,4 @@
-const CACHE = 'portatil-gba-v1';
+const CACHE = 'emulation-station-pro-v1';
 const SHELL = [
   './index.html',
   './manifest.json',
@@ -23,8 +23,6 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Only handle same-origin app-shell requests; let ROM blobs and the
-  // EmulatorJS CDN pass straight through to the network.
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
