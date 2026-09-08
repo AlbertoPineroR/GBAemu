@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Portátil · Emulador GBA</title>
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Portátil">
+<meta name="theme-color" content="#1a1625">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg: #16121f;
+    --shell: #2a2340;
+    --shell-light: #352c4f;
+    --screen: #0d0b14;
+    --ink: #f1ede4;
+    --ink-dim: #b6aecb;
+    --accent: #8b7cf6;
+    --accent-dim: #5b4fb8;
+    --led: #ff7a45;
+    --line: rgba(241,237,228,0.09);
+  }
+
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body{
+    margin:0; padding:0; height:100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, sans-serif;
+    overscroll-behavior: none;
+  }
+
+  body{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding: max(20px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+    min-height: 100vh;
+  }
+
+  .wrap{ width:100%; max-width: 520px; }
+
+  header{
+    display:flex;
+    align-items:baseline;
+    justify-content: space-between;
+    margin-bottom: 18px;
+    padding: 0 2px;
+  }
+
+  .logo{
+    font-family:'Press Start 2P', monospace;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    color: var(--ink);
+  }
+  .logo span{ color: var(--accent); }
+
+  .led-row{ display:flex; align-items:center; gap:6px; }
+  .led{
+    width:7px; height:7px; border-radius:50%;
+    background: var(--led);
+    box-shadow: 0 0 6px 1px var(--led);
+  }
+  .led-row small{ color: var(--ink-dim); font-size:11px; }
+
+  /* --- shell --- */
+  .shell{
+    background: linear-gradient(160deg, var(--shell-light), var(--shell) 60%);
+    border-radius: 22px;
+    padding: 16px;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.06),
+      0 20px 40px -20px rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+
+  .screen-frame{
+    background: #08070c;
+    border-radius: 10px;
+    padding: 10px;
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.8);
+  }
+
+  .screen{
+    position: relative;
+    width: 100%;
+    aspect-ratio: 3 / 2;
+    background: var(--screen);
+    border-radius: 4px;
+    overflow: hidden;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  #game{ width:100%; height:100%; }
+
+  .placeholder{
+    text-align:center;
+    padding: 24px;
+    color: var(--ink-dim);
+  }
+  .placeholder .pixel-cart{
+    width: 40px; height: 40px;
+    margin: 0 auto 14px;
+    border: 2px solid var(--ink-dim);
+    border-radius: 4px;
+    position: relative;
+  }
+  .placeholder .pixel-cart::before{
+    content:"";
+    position:absolute; top:-6px; left:8px;
+    width: 14px; height: 8px;
+    border: 2px solid var(--ink-dim);
+    border-bottom: none;
+    border-radius: 3px 3px 0 0;
+  }
+  .placeholder p{ font-size: 13px; line-height:1.6; margin: 0; }
+
+  .rom-row{
+    margin-top: 14px;
+    display:flex;
+    gap: 10px;
+  }
+
+  .btn{
+    flex:1;
+    font-family:'Inter';
+    font-weight: 600;
+    font-size: 14px;
+    padding: 13px 16px;
+    border-radius: 12px;
+    border: none;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    transition: transform .12s ease, filter .12s ease;
+  }
+  .btn:active{ transform: scale(0.97); }
+
+  .btn-primary{
+    background: var(--accent);
+    color: #14101f;
+  }
+  .btn-primary:active{ filter: brightness(0.92); }
+
+  .btn-ghost{
+    background: rgba(241,237,228,0.06);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    flex: 0 0 auto;
+    width: 48px;
+  }
+
+  #rom-input{ display:none; }
+
+  .rom-name{
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--ink-dim);
+    text-align:center;
+    min-height: 16px;
+    word-break: break-all;
+  }
+
+  .hint{
+    margin-top: 22px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: rgba(139,124,246,0.07);
+    border: 1px solid rgba(139,124,246,0.18);
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--ink-dim);
+  }
+  .hint strong{ color: var(--ink); font-weight:600; }
+
+  footer{
+    margin-top: 20px;
+    text-align:center;
+    font-size: 11px;
+    color: var(--ink-dim);
+    opacity: 0.6;
+  }
+
+  #install-banner{
+    display:none;
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--shell-light);
+    border: 1px solid var(--line);
+    font-size: 12.5px;
+    color: var(--ink-dim);
+    line-height:1.5;
+  }
+  #install-banner strong{ color: var(--ink); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo">portáti<span>l</span></div>
+      <div class="led-row"><div class="led"></div><small>GBA</small></div>
+    </header>
+
+    <div class="shell">
+      <div class="screen-frame">
+        <div class="screen">
+          <div id="game"></div>
+          <div class="placeholder" id="placeholder">
+            <div class="pixel-cart"></div>
+            <p>Carga una ROM de<br>Game Boy Advance para empezar</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="rom-row">
+        <button class="btn btn-primary" id="load-btn">Cargar ROM</button>
+        <button class="btn btn-ghost" id="reset-btn" title="Reiniciar" disabled>&#8635;</button>
+      </div>
+      <input type="file" id="rom-input">
+      <div class="rom-name" id="rom-name"></div>
+    </div>
+
+    <div class="hint" id="install-hint">
+      <strong>Instálala en tu iPhone:</strong> toca Compartir <span style="opacity:.7">(el icono del cuadrado con flecha)</span> en Safari y elige <strong>«Añadir a pantalla de inicio»</strong>. Se abrirá como una app aparte, a pantalla completa.
+    </div>
+
+    <footer>Las ROMs se cargan solo en tu dispositivo. Nada se sube a ningún servidor.</footer>
+  </div>
+
+<script>
+  const loadBtn = document.getElementById('load-btn');
+  const resetBtn = document.getElementById('reset-btn');
+  const romInput = document.getElementById('rom-input');
+  const romNameEl = document.getElementById('rom-name');
+  const placeholder = document.getElementById('placeholder');
+
+  let emulatorStarted = false;
+
+  loadBtn.addEventListener('click', () => romInput.click());
+
+  romInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    romNameEl.textContent = file.name;
+    startEmulator(file);
+  });
+
+  resetBtn.addEventListener('click', () => {
+    if (window.EJS_emulator && window.EJS_emulator.gameManager) {
+      window.EJS_emulator.gameManager.restart();
+    }
+  });
+
+  function startEmulator(file){
+    placeholder.style.display = 'none';
+    const url = URL.createObjectURL(file);
+
+    if (emulatorStarted) {
+      // EmulatorJS doesn't support hot-swapping cleanly; reload with new game.
+      window.EJS_gameUrl = url;
+      window.location.reload(); // fallback for simplicity on iOS Safari
+      return;
+    }
+
+    window.EJS_player = '#game';
+    window.EJS_core = 'gba';
+    window.EJS_gameName = file.name;
+    window.EJS_gameUrl = url;
+    window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+    window.EJS_startOnLoaded = true;
+    window.EJS_backgroundColor = '#08070c';
+    window.EJS_volume = 0.5;
+    window.EJS_defaultControls = undefined; // use EmulatorJS default touch controls
+
+    const script = document.createElement('script');
+    script.src = window.EJS_pathtodata + 'loader.js';
+    document.body.appendChild(script);
+
+    emulatorStarted = true;
+    resetBtn.disabled = false;
+  }
+
+  // Persist last-used ROM name across the running session only (no storage APIs per platform rules).
+
+  // Register service worker for offline shell caching (requires https hosting).
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
+
+  // Hide the install hint once the app is already running standalone (installed).
+  if (window.navigator.standalone === true) {
+    document.getElementById('install-hint').style.display = 'none';
+  }
+</script>
+</body>
+</html>
